@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tic Tac Toe</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #1b1d2a;
+    --panel: #262a3d;
+    --cell: #2f3450;
+    --cell-hover: #3a3f63;
+    --accent-x: #ff6b6b;
+    --accent-o: #4dd8ff;
+    --text: #f4f5fb;
+    --muted: #9aa0c3;
+    --win: #ffd166;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at top, #2a2e45, var(--bg));
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    color: var(--text);
+    padding: 20px;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    letter-spacing: 2px;
+  }
+
+  .scoreboard {
+    display: flex;
+    width: 100%;
+    background: var(--panel);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+  }
+
+  .score {
+    flex: 1;
+    text-align: center;
+    padding: 10px 4px;
+  }
+
+  .score + .score { border-left: 1px solid rgba(255,255,255,0.08); }
+
+  .score .label {
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .score .value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-top: 2px;
+  }
+
+  .score.x .value { color: var(--accent-x); }
+  .score.o .value { color: var(--accent-o); }
+
+  .status {
+    min-height: 28px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+  }
+
+  .cell {
+    background: var(--cell);
+    border: none;
+    border-radius: 12px;
+    font-size: clamp(2.2rem, 10vw, 3.2rem);
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text);
+    transition: background 0.15s ease, transform 0.1s ease;
+  }
+
+  .cell:hover:not(:disabled) {
+    background: var(--cell-hover);
+  }
+
+  .cell:active:not(:disabled) {
+    transform: scale(0.96);
+  }
+
+  .cell:disabled {
+    cursor: default;
+  }
+
+  .cell.x { color: var(--accent-x); }
+  .cell.o { color: var(--accent-o); }
+
+  .cell.win {
+    background: rgba(255, 209, 102, 0.18);
+    box-shadow: inset 0 0 0 2px var(--win);
+    animation: pop 0.3s ease;
+  }
+
+  @keyframes pop {
+    0% { transform: scale(0.9); }
+    60% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+
+  .mode-toggle {
+    display: flex;
+    width: 100%;
+    background: var(--panel);
+    border-radius: 12px;
+    padding: 4px;
+    gap: 4px;
+  }
+
+  .mode-toggle button {
+    flex: 1;
+    padding: 9px;
+    border: none;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .mode-toggle button.active {
+    background: var(--accent-o);
+    color: #0b1220;
+  }
+
+  .difficulty {
+    display: flex;
+    width: 100%;
+    background: var(--panel);
+    border-radius: 12px;
+    padding: 4px;
+    gap: 4px;
+    margin-top: -8px;
+  }
+
+  .difficulty button {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .difficulty button.active {
+    background: var(--win);
+    color: #0b1220;
+  }
+
+  .difficulty.hidden {
+    display: none;
+  }
+
+  .controls {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+  }
+
+  button.action {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: filter 0.15s ease;
+  }
+
+  button.action:hover { filter: brightness(1.1); }
+
+  #playAgain {
+    background: var(--accent-o);
+    color: #0b1220;
+  }
+
+  #resetScore {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <h1>TIC · TAC · TOE</h1>
+
+    <div class="mode-toggle">
+      <button id="modePvp" class="active">2 Players</button>
+      <button id="modeAi">vs AI</button>
+    </div>
+
+    <div class="difficulty hidden" id="difficulty">
+      <button id="diffEasy" data-difficulty="easy">Easy</button>
+      <button id="diffMedium" class="active" data-difficulty="medium">Medium</button>
+      <button id="diffHard" data-difficulty="hard">Hard</button>
+    </div>
+
+    <div class="scoreboard">
+      <div class="score x">
+        <div class="label" id="labelX">Player X</div>
+        <div class="value" id="scoreX">0</div>
+      </div>
+      <div class="score">
+        <div class="label">Draws</div>
+        <div class="value" id="scoreDraw">0</div>
+      </div>
+      <div class="score o">
+        <div class="label" id="labelO">Player O</div>
+        <div class="value" id="scoreO">0</div>
+      </div>
+    </div>
+
+    <div class="status" id="status">X's turn</div>
+
+    <div class="board" id="board"></div>
+
+    <div class="controls">
+      <button class="action" id="playAgain">Play Again</button>
+      <button class="action" id="resetScore">Reset Score</button>
+    </div>
+  </div>
+
+<script>
+  const WIN_LINES = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+
+  const state = {
+    board: Array(9).fill(null),
+    current: 'X',
+    gameOver: false,
+    mode: 'pvp', // 'pvp' or 'ai'
+    difficulty: 'medium', // 'easy', 'medium', or 'hard'
+    aiThinking: false,
+    scores: { X: 0, O: 0, Draw: 0 }
+  };
+
+  const AI_PLAYER = 'O';
+  const HUMAN_PLAYER = 'X';
+
+  const boardEl = document.getElementById('board');
+  const statusEl = document.getElementById('status');
+  const scoreXEl = document.getElementById('scoreX');
+  const scoreOEl = document.getElementById('scoreO');
+  const scoreDrawEl = document.getElementById('scoreDraw');
+  const labelXEl = document.getElementById('labelX');
+  const labelOEl = document.getElementById('labelO');
+  const modePvpEl = document.getElementById('modePvp');
+  const modeAiEl = document.getElementById('modeAi');
+  const difficultyEl = document.getElementById('difficulty');
+  const diffButtons = difficultyEl.querySelectorAll('button');
+
+  function buildBoard() {
+    boardEl.innerHTML = '';
+    for (let i = 0; i < 9; i++) {
+      const cell = document.createElement('button');
+      cell.className = 'cell';
+      cell.dataset.index = i;
+      cell.addEventListener('click', () => handleMove(i));
+      boardEl.appendChild(cell);
+    }
+  }
+
+  function checkWinner(board = state.board) {
+    for (const line of WIN_LINES) {
+      const [a, b, c] = line;
+      if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+        return { player: board[a], line };
+      }
+    }
+    return null;
+  }
+
+  // Picks the AI's move according to the selected difficulty.
+  function getAiMove(board) {
+    const empties = board.reduce((acc, v, i) => { if (!v) acc.push(i); return acc; }, []);
+    const randomChance = state.difficulty === 'easy' ? 0.8 : state.difficulty === 'medium' ? 0.4 : 0;
+    if (Math.random() < randomChance) {
+      return empties[Math.floor(Math.random() * empties.length)];
+    }
+    return bestAiMove(board);
+  }
+
+  // Minimax search: unbeatable AI. Returns the best index for AI_PLAYER to play.
+  function bestAiMove(board) {
+    let bestScore = -Infinity;
+    let move = null;
+    for (let i = 0; i < 9; i++) {
+      if (board[i]) continue;
+      board[i] = AI_PLAYER;
+      const score = minimax(board, 0, false);
+      board[i] = null;
+      if (score > bestScore) {
+        bestScore = score;
+        move = i;
+      }
+    }
+    return move;
+  }
+
+  function minimax(board, depth, isMaximizing) {
+    const winInfo = checkWinner(board);
+    if (winInfo) return winInfo.player === AI_PLAYER ? 10 - depth : depth - 10;
+    if (board.every(Boolean)) return 0;
+
+    if (isMaximizing) {
+      let best = -Infinity;
+      for (let i = 0; i < 9; i++) {
+        if (board[i]) continue;
+        board[i] = AI_PLAYER;
+        best = Math.max(best, minimax(board, depth + 1, false));
+        board[i] = null;
+      }
+      return best;
+    } else {
+      let best = Infinity;
+      for (let i = 0; i < 9; i++) {
+        if (board[i]) continue;
+        board[i] = HUMAN_PLAYER;
+        best = Math.min(best, minimax(board, depth + 1, true));
+        board[i] = null;
+      }
+      return best;
+    }
+  }
+
+  function render(winInfo) {
+    const cells = boardEl.children;
+    for (let i = 0; i < 9; i++) {
+      const cell = cells[i];
+      const mark = state.board[i];
+      cell.textContent = mark || '';
+      cell.className = 'cell' + (mark ? ' ' + mark.toLowerCase() : '');
+      cell.disabled = !!mark || state.gameOver || state.aiThinking;
+    }
+    if (winInfo) {
+      for (const idx of winInfo.line) {
+        cells[idx].classList.add('win');
+      }
+    }
+
+    if (winInfo) {
+      const who = state.mode === 'ai' && winInfo.player === AI_PLAYER ? 'AI' : winInfo.player;
+      statusEl.textContent = `${who} wins!`;
+    } else if (state.board.every(Boolean)) {
+      statusEl.textContent = "It's a draw!";
+    } else if (state.aiThinking) {
+      statusEl.textContent = 'AI is thinking…';
+    } else if (state.mode === 'ai') {
+      statusEl.textContent = state.current === HUMAN_PLAYER ? 'Your turn' : "AI's turn";
+    } else {
+      statusEl.textContent = `${state.current}'s turn`;
+    }
+
+    scoreXEl.textContent = state.scores.X;
+    scoreOEl.textContent = state.scores.O;
+    scoreDrawEl.textContent = state.scores.Draw;
+    labelXEl.textContent = state.mode === 'ai' ? 'You (X)' : 'Player X';
+    labelOEl.textContent = state.mode === 'ai' ? 'AI' : 'Player O';
+  }
+
+  function finishTurn() {
+    const winInfo = checkWinner();
+    const isDraw = !winInfo && state.board.every(Boolean);
+
+    if (winInfo) {
+      state.gameOver = true;
+      state.scores[winInfo.player]++;
+    } else if (isDraw) {
+      state.gameOver = true;
+      state.scores.Draw++;
+    } else {
+      state.current = state.current === 'X' ? 'O' : 'X';
+    }
+
+    render(winInfo);
+
+    if (!state.gameOver && state.mode === 'ai' && state.current === AI_PLAYER) {
+      state.aiThinking = true;
+      render(null);
+      setTimeout(runAiMove, 450);
+    }
+  }
+
+  function runAiMove() {
+    const move = getAiMove(state.board);
+    state.aiThinking = false;
+    if (move === null || state.gameOver) { render(null); return; }
+    state.board[move] = AI_PLAYER;
+    finishTurn();
+  }
+
+  function handleMove(index) {
+    if (state.gameOver || state.board[index] || state.aiThinking) return;
+    if (state.mode === 'ai' && state.current !== HUMAN_PLAYER) return;
+
+    state.board[index] = state.current;
+    finishTurn();
+  }
+
+  function playAgain() {
+    state.board = Array(9).fill(null);
+    state.current = 'X';
+    state.gameOver = false;
+    state.aiThinking = false;
+    render(null);
+  }
+
+  function resetScore() {
+    state.scores = { X: 0, O: 0, Draw: 0 };
+    playAgain();
+  }
+
+  function setMode(mode) {
+    if (state.mode === mode) return;
+    state.mode = mode;
+    modePvpEl.classList.toggle('active', mode === 'pvp');
+    modeAiEl.classList.toggle('active', mode === 'ai');
+    difficultyEl.classList.toggle('hidden', mode !== 'ai');
+    resetScore();
+  }
+
+  function setDifficulty(difficulty) {
+    if (state.difficulty === difficulty) return;
+    state.difficulty = difficulty;
+    diffButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.difficulty === difficulty));
+    resetScore();
+  }
+
+  document.getElementById('playAgain').addEventListener('click', playAgain);
+  document.getElementById('resetScore').addEventListener('click', resetScore);
+  modePvpEl.addEventListener('click', () => setMode('pvp'));
+  modeAiEl.addEventListener('click', () => setMode('ai'));
+  diffButtons.forEach(btn => btn.addEventListener('click', () => setDifficulty(btn.dataset.difficulty)));
+
+  buildBoard();
+  render(null);
+</script>
+</body>
+</html>
