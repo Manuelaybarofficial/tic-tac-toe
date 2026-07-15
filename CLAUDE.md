@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A single-file, dependency-free Tic-Tac-Toe game: [index.html](index.html). No build step, no package.json, no server-side code — everything (HTML, CSS, JS) lives inline in that one file so it can be opened directly in a browser or double-clicked from Google Drive.
 
+The repo also contains a second, unrelated single-file app: [dictionary.html](dictionary.html), a mobile-first English dictionary web app (with [dictionary-icon.png](dictionary-icon.png) as its iOS home-screen icon). It follows the same convention — all HTML/CSS/JS inline, no build step. It fetches definitions from the public `api.dictionaryapi.dev` API, plays pronunciation audio (recorded audio from the API, `speechSynthesis` en-US fallback), and persists user-created word categories in `localStorage` under the key `mydictionary.v1`.
+
 ## Running / testing
 
 There is no build or test tooling. To preview changes, serve the directory and open it in a browser, e.g.:
