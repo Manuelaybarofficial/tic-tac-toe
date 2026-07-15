@@ -149,6 +149,18 @@
     padding-left: 10px;
     border-left: 2px solid var(--accent-soft);
   }
+  .es-line {
+    color: var(--accent);
+    margin-top: 4px;
+    font-size: 0.95rem;
+  }
+  .entry-es {
+    width: 100%;
+    color: var(--accent);
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-top: 2px;
+  }
   .synonyms { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
   .synonyms .label { font-size: 0.8rem; color: var(--text-soft); font-weight: 600; margin-right: 2px; }
   .chip {
@@ -494,6 +506,69 @@
     }
   }
 
+  // ---------- Spanish translation ----------
+  var GTX = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=es&dt=t&q=';
+  var MYMEMORY = 'https://api.mymemory.translated.net/get?langpair=en%7Ces&q=';
+
+  function gtxTranslate(text) {
+    return fetch(GTX + encodeURIComponent(text))
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (data) {
+        var out = '';
+        ((data && data[0]) || []).forEach(function (seg) { if (seg && seg[0]) out += seg[0]; });
+        if (!out) throw new Error('empty translation');
+        return out;
+      });
+  }
+  function myMemoryTranslate(text) {
+    return fetch(MYMEMORY + encodeURIComponent(text))
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var t = d && d.responseData && d.responseData.translatedText;
+        if (!t) throw new Error('empty translation');
+        return t;
+      });
+  }
+  function translateOne(text) {
+    return gtxTranslate(text).catch(function () { return myMemoryTranslate(text); });
+  }
+  // Translate several texts in one round trip when possible (newline-joined),
+  // falling back to one request per text if the segmentation doesn't line up.
+  function translateBatch(texts) {
+    if (!texts.length) return Promise.resolve([]);
+    return gtxTranslate(texts.join('\n'))
+      .then(function (out) {
+        var parts = out.split('\n').map(function (s) { return s.trim(); })
+          .filter(function (s) { return s !== ''; });
+        if (parts.length !== texts.length) throw new Error('segment mismatch');
+        return parts;
+      })
+      .catch(function () {
+        return Promise.all(texts.map(function (t) {
+          return translateOne(t).catch(function () { return null; });
+        }));
+      });
+  }
+
+  // Adds Spanish (_esWord on the first entry, _es on each rendered definition)
+  // by mutating the entry objects, then lets the caller re-render/persist.
+  function addSpanish(word, entries) {
+    var texts = [word];
+    var defs = [];
+    entries.forEach(function (entry) {
+      (entry.meanings || []).forEach(function (m) {
+        (m.definitions || []).slice(0, 6).forEach(function (d) {
+          if (d.definition) { texts.push(d.definition); defs.push(d); }
+        });
+      });
+    });
+    return translateBatch(texts).then(function (out) {
+      var esWord = out[0];
+      if (esWord && esWord.toLowerCase() !== word.toLowerCase()) entries[0]._esWord = esWord;
+      defs.forEach(function (d, i) { if (out[i + 1]) d._es = out[i + 1]; });
+    });
+  }
+
   // ---------- entry rendering ----------
   function phoneticText(entries) {
     for (var i = 0; i < entries.length; i++) {
@@ -529,6 +604,9 @@
       actions.appendChild(saveBtn);
     }
     head.appendChild(actions);
+    if (entries[0] && entries[0]._esWord) {
+      head.appendChild(el('div', 'entry-es', '🇪🇸 ' + entries[0]._esWord));
+    }
     card.appendChild(head);
 
     // one section per part of speech
@@ -541,6 +619,7 @@
         (m.definitions || []).slice(0, 6).forEach(function (d) {
           var li = el('li');
           li.appendChild(el('div', null, d.definition));
+          if (d._es) li.appendChild(el('div', 'es-line', '🇪🇸 ' + d._es));
           if (d.example) li.appendChild(el('div', 'example', '“' + d.example + '”'));
           list.appendChild(li);
         });
@@ -569,9 +648,12 @@
     return c;
   }
 
+  var lookupSeq = 0;
+
   function lookup(word) {
     word = (word || '').trim();
     if (!word) return;
+    var seq = ++lookupSeq;
     var area = $('result-area');
     area.textContent = '';
     var loading = el('div', 'state glass card');
@@ -587,12 +669,26 @@
       })
       .then(function (entries) {
         if (!Array.isArray(entries) || !entries.length) throw { notFound: true };
+        if (seq !== lookupSeq) return;
         currentEntry = entries;
         currentWord = entries[0].word || word;
         area.textContent = '';
         area.appendChild(renderEntry(currentWord, entries));
+        // Spanish arrives a moment later; re-render when it does. If the word
+        // was saved in the meantime, persist the translations too (the store
+        // holds the same entry objects).
+        var w = currentWord;
+        addSpanish(w, entries).then(function () {
+          if (wordIsSaved(w)) saveStore();
+          if (seq === lookupSeq && currentWord === w && !$('view-search').hidden
+              && area.querySelector('.entry-word')) {
+            area.textContent = '';
+            area.appendChild(renderEntry(w, entries));
+          }
+        }).catch(function () { /* no Spanish — English entry stays as is */ });
       })
       .catch(function (err) {
+        if (seq !== lookupSeq) return;
         area.textContent = '';
         if (err && err.notFound) {
           area.appendChild(stateCard('🤔', 'Word not found',

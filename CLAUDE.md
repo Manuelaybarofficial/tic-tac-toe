@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A single-file, dependency-free Tic-Tac-Toe game: [index.html](index.html). No build step, no package.json, no server-side code — everything (HTML, CSS, JS) lives inline in that one file so it can be opened directly in a browser or double-clicked from Google Drive.
 
-The repo also contains a second, unrelated single-file app: [dictionary.html](dictionary.html), a mobile-first English dictionary web app (with [dictionary-icon.png](dictionary-icon.png) as its iOS home-screen icon). It follows the same convention — all HTML/CSS/JS inline, no build step. It fetches definitions from the public `api.dictionaryapi.dev` API, plays pronunciation audio (recorded audio from the API, `speechSynthesis` en-US fallback), and persists user-created word categories in `localStorage` under the key `mydictionary.v1`.
+The repo also contains a second, unrelated single-file app: [dictionary.html](dictionary.html), a mobile-first English dictionary web app (with [dictionary-icon.png](dictionary-icon.png) as its iOS home-screen icon). It follows the same convention — all HTML/CSS/JS inline, no build step. It fetches definitions from the public `api.dictionaryapi.dev` API, adds Spanish translations of the word and each definition (Google's unofficial `translate.googleapis.com` gtx endpoint, with `api.mymemory.translated.net` as fallback), plays pronunciation audio (recorded audio from the API, `speechSynthesis` en-US fallback), and persists user-created word categories in `localStorage` under the key `mydictionary.v1`. Translations are stored as `_esWord`/`_es` fields mutated onto the cached API entry objects, so saved words keep their Spanish offline.
 
 ## Running / testing
 
